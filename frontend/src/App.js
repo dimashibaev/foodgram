@@ -302,7 +302,7 @@ function App() {
             </Route>
 
             <Route exact path="/technologies">
-              {<Technologies component={Technologies}/>}
+              {<Technologies component={Technologies} />}
             </Route>
 
             <Route exact path="/recipes">

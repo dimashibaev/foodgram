@@ -6,16 +6,14 @@ from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
-from backend.CONST import MAX_SIZE_MB
+from backend.const import MAX_SIZE_MB
 from recipes.models import Recipe
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для отображения информации о пользователе.
-    """
+    """Сериализатор для отображения информации о пользователе"""
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(
         read_only=True, allow_null=True, required=False
@@ -69,9 +67,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(UserSerializer):
-    """
-    Сериализатор для отображения информации о подписке.
-    """
+    """Сериализатор для отображения информации о подписке"""
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
@@ -81,7 +77,7 @@ class SubscriptionSerializer(UserSerializer):
         )
 
     def get_recipes(self, obj):
-        """Возвращает список рецептов автора с учётом параметра `recipes_limit`."""
+        """Возвращает список рецептов автора"""
         from recipes.serializers import ShortRecipeSerializer
         qs = Recipe.objects.filter(author=obj).order_by('-created_at')
 
@@ -116,14 +112,17 @@ class AvatarUploadSerializer(serializers.Serializer):
         fields = ("avatar",)
 
     def validate_avatar(self, file_obj):
-        """Проверяет размер и формат загружаемого изображения (JPG или PNG)."""
+        """Проверяет размер и формат загружаемого изображения (JPG или PNG)"""
         size = getattr(file_obj, "size", None)
         if size is not None and size > self.MAX_SIZE:
             raise ValidationError("Файл слишком большой (макс. 5 МБ).")
 
         try:
             data = getattr(file_obj, "read", None)
-            raw = data() if callable(data) else getattr(file_obj, "file", None).read()
+            raw = (
+                data() if callable(data)
+                else getattr(file_obj, "file", None).read()
+            )
         except Exception:
             raw = None
 
@@ -137,7 +136,7 @@ class AvatarUploadSerializer(serializers.Serializer):
         return file_obj
 
     def update(self, instance, validated_data):
-        """Обновляет аватар пользователя."""
+        """Обновляет аватар пользователя"""
         instance.avatar = validated_data["avatar"]
         instance.save(update_fields=["avatar"])
         return instance

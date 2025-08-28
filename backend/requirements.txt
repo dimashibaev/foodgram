@@ -5,6 +5,7 @@ djoser==2.2.2
 django-filter==23.5
 django-cors-headers==4.5.0
 drf-extra-fields==3.7.0
+dotenv==0.9.9
 Pillow==10.4.0
 PyYAML==6.0
 python-dotenv==1.0.0

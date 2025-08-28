@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, serializers, status, viewsets
+from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -22,7 +22,7 @@ class UserViewSet(viewsets.ModelViewSet):
     - /users/me/ (данные текущего пользователя),
     - смена пароля,
     - загрузка/удаление аватара,
-    - подписки и отписки.
+    - подписки и отписки
     """
     queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
@@ -37,7 +37,7 @@ class UserViewSet(viewsets.ModelViewSet):
     }
 
     def get_permissions(self):
-        """Возвращает права доступа в зависимости от action."""
+        """Возвращает права доступа в зависимости от action"""
         if self.action == 'create':
             return [AllowAny()]
         if self.action in self._auth_required:
@@ -45,7 +45,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
 
     def get_serializer_class(self):
-        """Возвращает сериализатор в зависимости от action."""
+        """Возвращает сериализатор в зависимости от action"""
         if self.action == 'create':
             return UserRegistrationSerializer
         if self.action in ('subscriptions', 'subscribe'):
@@ -54,7 +54,11 @@ class UserViewSet(viewsets.ModelViewSet):
             return AvatarUploadSerializer
         return UserSerializer
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
     def me(self, request):
         """Возвращает данные текущего пользователя."""
         return Response(
@@ -68,7 +72,7 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def set_password(self, request):
-        """Изменяет пароль текущего пользователя."""
+        """Изменяет пароль текущего пользователя"""
         current_password = (request.data.get('current_password') or '').strip()
         new_password = (request.data.get('new_password') or '').strip()
 
@@ -91,8 +95,11 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def avatar(self, request):
-        """Загружает или обновляет аватар пользователя."""
-        if "avatar" not in request.data and "avatar" not in getattr(request, "FILES", {}):
+        """Загружает или обновляет аватар пользователя"""
+        if (
+            "avatar" not in request.data
+            and "avatar" not in getattr(request, "FILES", {})
+        ):
             return Response(
                 {"avatar": ["Это поле обязательно."]},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -115,9 +122,13 @@ class UserViewSet(viewsets.ModelViewSet):
             request.user.avatar.delete(save=True)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated]
+    )
     def subscribe(self, request, pk=None):
-        """Оформляет подписку на выбранного автора."""
+        """Оформляет подписку на выбранного автора"""
         author = get_object_or_404(User, pk=pk)
 
         if author == request.user:
@@ -126,7 +137,8 @@ class UserViewSet(viewsets.ModelViewSet):
                 status=HTTPStatus.BAD_REQUEST
             )
 
-        if Follow.objects.filter(subscriber=request.user, author=author).exists():
+        if Follow.objects.filter(
+                subscriber=request.user, author=author).exists():
             return Response(
                 {'detail': 'Вы уже подписаны на этого автора.'},
                 status=HTTPStatus.BAD_REQUEST
@@ -139,7 +151,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @subscribe.mapping.delete
     def unsubscribe(self, request, pk=None):
-        """Отписывает текущего пользователя от выбранного автора."""
+        """Отписывает текущего пользователя от выбранного автора"""
         author = get_object_or_404(User, pk=pk)
         qs = Follow.objects.filter(subscriber=request.user, author=author)
         if not qs.exists():
@@ -150,9 +162,13 @@ class UserViewSet(viewsets.ModelViewSet):
         qs.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=[IsAuthenticated]
+    )
     def subscriptions(self, request):
-        """Возвращает список авторов, на которых подписан текущий пользователь."""
+        """Возвращает список авторов, на которых подписан пользователь"""
         authors = User.objects.filter(
             subscribers__subscriber=request.user
         ).distinct()

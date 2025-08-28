@@ -10,7 +10,7 @@ class User(AbstractUser):
         max_length=150,
         unique=True
     )
-    
+
     first_name = models.CharField(
         'Имя',
         max_length=150,

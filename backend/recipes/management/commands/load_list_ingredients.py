@@ -27,7 +27,7 @@ class Command(BaseCommand):
         if not isinstance(data, list):
             raise CommandError("Ожидался список объектов.")
 
-        seen = set()  
+        seen = set()
         created = updated = skipped = 0
 
         for i, item in enumerate(data, 1):
@@ -60,5 +60,6 @@ class Command(BaseCommand):
                 skipped += 1
 
         self.stdout.write(self.style.SUCCESS(
-            f"Готово: создано {created}, обновлено {updated}, пропущено {skipped}"
+            f"Готово: создано {created}, "
+            f"обновлено {updated}, пропущено {skipped}"
         ))

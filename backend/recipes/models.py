@@ -3,8 +3,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import CheckConstraint, Q
 
-from backend.CONST import (MAX_COOKING_TIME, MAX_INGR_AMOUNT, MIN_AMOUNT,
-                           MIN_COOKING_TIME)
+from backend.const import (MAX_COOKING_TIME, MAX_INGR_AMOUNT,
+                           MIN_AMOUNT, MIN_COOKING_TIME)
 
 
 class Tag(models.Model):
@@ -49,9 +49,12 @@ class Recipe(models.Model):
     duration = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(MIN_COOKING_TIME,
-                              message="Время приготовления должно быть ≥ 1"),
+                              message="Время приготовления должно быть ≥ 1"
+                              ),
             MaxValueValidator(
-                MAX_COOKING_TIME, message=f"Время приготовления не больше {MAX_COOKING_TIME} минут"),
+                MAX_COOKING_TIME,
+                message=f"Время приготовления не более {MAX_COOKING_TIME} мин."
+            ),
         ],
         verbose_name="Время приготовления (мин.)"
     )
@@ -87,21 +90,27 @@ class IngredientAmount(models.Model):
     amount = models.PositiveIntegerField(
         validators=[
             MinValueValidator(
-                MIN_AMOUNT, message="Количество должно быть не менее 1"),
+                MIN_AMOUNT,
+                message="Количество должно быть не менее 1"
+            ),
             MaxValueValidator(
-                MAX_INGR_AMOUNT, message=f"Количество не больше {MAX_INGR_AMOUNT}"),
+                MAX_INGR_AMOUNT,
+                message=f"Количество не больше {MAX_INGR_AMOUNT}"
+            ),
         ]
     )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['recipe', 'ingredient'], name='unique_recipe_ingredient')
+                fields=['recipe', 'ingredient'],
+                name='unique_recipe_ingredient'
+            )
         ]
         CheckConstraint(
-                check=Q(amount__gte=MIN_AMOUNT, amount__lte=MAX_INGR_AMOUNT),
-                name="ingredient_amount_range_check",
-            ),
+            check=Q(amount__gte=MIN_AMOUNT, amount__lte=MAX_INGR_AMOUNT),
+            name="ingredient_amount_range_check",
+        ),
         verbose_name = "Ингредиент в рецепте"
         verbose_name_plural = "Ингредиенты в рецептах"
 
@@ -110,6 +119,7 @@ class IngredientAmount(models.Model):
 
 
 class Bookmark(models.Model):
+    """Модель избранного"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='bookmarks',
@@ -131,6 +141,7 @@ class Bookmark(models.Model):
 
 
 class CartItem(models.Model):
+    """Модель покупки"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='cart_items',

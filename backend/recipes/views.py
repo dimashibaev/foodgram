@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from backend.pagination import CustomPageNumberPagination
@@ -54,7 +54,7 @@ class IngredientViewSet(mixins.ListModelMixin,
         if q is None or q == '':
             return qs
         # ВАЖНО: начало строки, регистронезависимо
-        return qs.filter(name__istartswith=q).order_by('name')[:10] 
+        return qs.filter(name__istartswith=q).order_by('name')[:10]
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -71,7 +71,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPageNumberPagination
 
     def get_serializer_class(self):
-        """Для POST/PUT/PATCH используем отдельный сериализатор (с валидацией)."""
+        """Для POST/PUT/PATCH используем отдельный сериализатор"""
         if self.request.method in ('POST', 'PUT', 'PATCH'):
             return RecipeCreateSerializer
         return RecipeSerializer
@@ -108,7 +108,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         read = RecipeSerializer(serializer.instance,
-                              context=self.get_serializer_context())
+                                context=self.get_serializer_context())
         return Response(read.data, status=HTTPStatus.CREATED)
 
     def update(self, request, *args, **kwargs):
@@ -119,11 +119,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         data = self._coerce_nested(request.data)
         partial = kwargs.pop('partial', False)
         serializer = self.get_serializer(
-            instance, data=data, partial=partial, context=self.get_serializer_context())
+            instance, data=data, partial=partial,
+            context=self.get_serializer_context()
+        )
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         read = RecipeSerializer(serializer.instance,
-                              context=self.get_serializer_context())
+                                context=self.get_serializer_context())
         return Response(read.data, status=HTTPStatus.OK)
 
     @action(
@@ -142,7 +144,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         url = f"{base}/recipes/{recipe.id}/"
         return Response({'short-link': url}, status=HTTPStatus.OK)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True,
+            methods=['post'],
+            permission_classes=[IsAuthenticated]
+            )
     def favorite(self, request, pk=None):
         """
         Добавить рецепт в избранное текущего пользователя.
@@ -151,8 +156,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         obj, created = Bookmark.objects.get_or_create(
             user=request.user, recipe=recipe)
         if not created:
-            return Response({'detail': 'Рецепт уже в избранном'}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = ShortRecipeSerializer(recipe, context={'request': request})
+            return Response({'detail': 'Рецепт уже в избранном'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = ShortRecipeSerializer(
+            recipe, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @favorite.mapping.delete
@@ -164,10 +171,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         deleted, _ = Bookmark.objects.filter(
             user=request.user, recipe=recipe).delete()
         if not deleted:
-            return Response({'detail': 'Рецепта нет в избранном'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Рецепта нет в избранном'},
+                            status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated]
+    )
     def shopping_cart(self, request, pk=None):
         """
         Добавить рецепт в список покупок.
@@ -176,8 +188,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         obj, created = CartItem.objects.get_or_create(
             user=request.user, recipe=recipe)
         if not created:
-            return Response({'detail': 'Рецепт уже в списке покупок'}, status=status.HTTP_400_BAD_REQUEST)
-        serializer = ShortRecipeSerializer(recipe, context={'request': request})
+            return Response({'detail': 'Рецепт уже в списке покупок'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = ShortRecipeSerializer(
+            recipe, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @shopping_cart.mapping.delete
@@ -189,7 +203,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         deleted, _ = CartItem.objects.filter(
             user=request.user, recipe=recipe).delete()
         if not deleted:
-            return Response({'detail': 'Рецепта нет в списке покупок'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Рецепта нет в списке покупок'},
+                            status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
@@ -218,5 +233,5 @@ class RecipeViewSet(viewsets.ModelViewSet):
         content = '\n'.join(lines) or 'Список покупок пуст.'
 
         resp = HttpResponse(content, content_type='text/plain; charset=utf-8')
-        resp['Content-Disposition'] = 'attachment; filename="shopping_list.txt"'
+        resp['Content-Disposition'] = 'attachment;filename="shopping_list.txt"'
         return resp

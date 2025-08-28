@@ -15,7 +15,7 @@ services:
 
   backend:
     container_name: foodgram-backend
-    build: ../backend/
+    image: dimashibaev/foodgram_backend
     env_file: ../.env.example
     depends_on:
       - db
@@ -26,13 +26,13 @@ services:
   frontend:
     env_file: ../.env.example
     container_name: foodgram-frontend
-    build: ../frontend/
+    image: dimashibaev/foodgram_frontend
     command: cp -r /app/build/. /frontend_static/
     volumes:
       - static:/frontend_static
 
   nginx:
-    image: nginx:1.25.4-alpine
+    image: nginx:1.25.4-alpinecd
     container_name: foodgram-proxy
     ports:
       - "8080:80"

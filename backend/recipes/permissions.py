@@ -6,6 +6,7 @@ class IsAuthorOrAdminOrReadOnly(BasePermission):
     GET/HEAD/OPTIONS — всем.
     POST/PATCH/PUT/DELETE — только автору объекта или администратору.
     """
+
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
