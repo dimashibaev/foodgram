@@ -10,12 +10,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    "89.169.167.79",
-    "foodgram.serveric.org",
-]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
+
 
 FRONTEND_URL = os.getenv('FRONTEND_URL')
 
@@ -53,7 +49,8 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'http://localhost',
     'http://127.0.0.1',
-    'https://foodgram.serveric.org',
+    'http://foodgram.serveirc.com',
+    'https://foodgram.serveirc.com',
 ]
 CORS_URLS_REGEX = r'^/api/.*$'
 

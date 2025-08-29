@@ -32,10 +32,10 @@ services:
       - static:/frontend_static
 
   nginx:
-    image: nginx:1.25.4-alpinecd
+    image: nginx:1.25.4-alpine
     container_name: foodgram-proxy
     ports:
-      - "8080:80"
+      - "80:80"
     depends_on:
       - backend
       - frontend
