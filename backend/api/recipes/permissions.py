@@ -2,10 +2,10 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAuthorOrAdminOrReadOnly(BasePermission):
-    """
+    '''
     GET/HEAD/OPTIONS — всем.
     POST/PATCH/PUT/DELETE — только автору объекта или администратору.
-    """
+    '''
 
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
@@ -17,6 +17,6 @@ class IsAuthorOrAdminOrReadOnly(BasePermission):
             return True
         u = request.user
         return (
-            getattr(obj, "author_id", None) == getattr(u, "id", None)
-            or (u and (u.is_staff or u.is_superuser))
+            getattr(obj, 'author_id', None) == getattr(u, 'id', None)
+            or (u and u.is_superuser)
         )

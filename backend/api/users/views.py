@@ -1,5 +1,8 @@
 from http import HTTPStatus
 
+from api.users.serializers import (AvatarUploadSerializer,
+                                   SubscriptionSerializer,
+                                   UserRegistrationSerializer, UserSerializer)
 from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, serializers, status, viewsets
@@ -7,12 +10,9 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from users.models import Follow, User
 
 from backend.pagination import CustomPageNumberPagination
-
-from .models import Follow, User
-from .serializers import (AvatarUploadSerializer, SubscriptionSerializer,
-                          UserRegistrationSerializer, UserSerializer)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -24,7 +24,7 @@ class UserViewSet(viewsets.ModelViewSet):
     - загрузка/удаление аватара,
     - подписки и отписки
     """
-    queryset = User.objects.all().order_by('id')
+    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (AllowAny,)
     filter_backends = (filters.SearchFilter,)
@@ -82,7 +82,6 @@ class UserViewSet(viewsets.ModelViewSet):
             )
 
         validate_password(new_password, user=request.user)
-
         request.user.set_password(new_password)
         request.user.save(update_fields=['password'])
         return Response(status=HTTPStatus.NO_CONTENT)
@@ -97,11 +96,11 @@ class UserViewSet(viewsets.ModelViewSet):
     def avatar(self, request):
         """Загружает или обновляет аватар пользователя"""
         if (
-            "avatar" not in request.data
-            and "avatar" not in getattr(request, "FILES", {})
+            'avatar' not in request.data
+            and 'avatar' not in getattr(request, 'FILES', {})
         ):
             return Response(
-                {"avatar": ["Это поле обязательно."]},
+                {'avatar': ['Это поле обязательно.']},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -109,7 +108,7 @@ class UserViewSet(viewsets.ModelViewSet):
             instance=request.user,
             data=request.data,
             partial=True,
-            context={"request": request},
+            context={'request': request},
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -138,7 +137,8 @@ class UserViewSet(viewsets.ModelViewSet):
             )
 
         if Follow.objects.filter(
-                subscriber=request.user, author=author).exists():
+            subscriber=request.user, author=author
+        ).exists():
             return Response(
                 {'detail': 'Вы уже подписаны на этого автора.'},
                 status=HTTPStatus.BAD_REQUEST
@@ -153,13 +153,14 @@ class UserViewSet(viewsets.ModelViewSet):
     def unsubscribe(self, request, pk=None):
         """Отписывает текущего пользователя от выбранного автора"""
         author = get_object_or_404(User, pk=pk)
-        qs = Follow.objects.filter(subscriber=request.user, author=author)
-        if not qs.exists():
+        deleted, _ = Follow.objects.filter(
+            subscriber=request.user, author=author
+        ).delete()
+        if not deleted:
             return Response(
                 {'detail': 'Подписка на этого автора отсутствует.'},
                 status=HTTPStatus.BAD_REQUEST
             )
-        qs.delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(
@@ -172,12 +173,15 @@ class UserViewSet(viewsets.ModelViewSet):
         authors = User.objects.filter(
             subscribers__subscriber=request.user
         ).distinct()
+
         page = self.paginate_queryset(authors)
-        ser = SubscriptionSerializer(
-            page if page is not None else authors,
-            many=True,
-            context={'request': request}
-        )
         if page is not None:
-            return self.get_paginated_response(ser.data)
-        return Response(ser.data)
+            serializer = SubscriptionSerializer(
+                page, many=True, context={'request': request}
+            )
+            return self.get_paginated_response(serializer.data)
+
+        serializer = SubscriptionSerializer(
+            authors, many=True, context={'request': request}
+        )
+        return Response(serializer.data)

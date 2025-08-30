@@ -1,6 +1,6 @@
+import django_filters
 from django_filters import rest_framework as filters
-
-from .models import Recipe, Tag
+from recipes.models import Ingredient, Recipe, Tag
 
 
 class RecipeFilter(filters.FilterSet):
@@ -29,3 +29,16 @@ class RecipeFilter(filters.FilterSet):
         if value and user and user.is_authenticated:
             return queryset.filter(cart_items__user=user)
         return queryset
+
+
+class IngredientFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(method='startswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ('name',)
+
+    def startswith(self, queryset, name, value):
+        if not value:
+            return queryset.order_by('name')
+        return queryset.filter(name__istartswith=value).order_by('name')[:10]
