@@ -25,7 +25,7 @@ class UserViewSet(viewsets.ModelViewSet):
     - загрузка/удаление аватара,
     - подписки и отписки.
     """
-    
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (AllowAny,)
