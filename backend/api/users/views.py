@@ -1,8 +1,5 @@
 from http import HTTPStatus
 
-from api.users.serializers import (AvatarUploadSerializer,
-                                   SubscriptionSerializer,
-                                   UserRegistrationSerializer, UserSerializer)
 from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, serializers, status, viewsets
@@ -10,20 +7,25 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from users.models import Follow, User
 
+from api.users.serializers import (AvatarUploadSerializer,
+                                   SubscriptionSerializer,
+                                   UserRegistrationSerializer, UserSerializer)
 from backend.pagination import CustomPageNumberPagination
+from users.models import Follow, User
 
 
 class UserViewSet(viewsets.ModelViewSet):
     """
-    Вьюсет для работы с пользователями:
+    Вьюсет для работы с пользователями.
+
     - список, регистрация и профиль,
     - /users/me/ (данные текущего пользователя),
     - смена пароля,
     - загрузка/удаление аватара,
-    - подписки и отписки
+    - подписки и отписки.
     """
+    
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (AllowAny,)

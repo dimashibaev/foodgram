@@ -4,16 +4,16 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from drf_extra_fields.fields import Base64ImageField
-from recipes.models import Recipe
 from rest_framework import serializers
 
-from backend.const import MAX_SIZE_PHOTO_MB
+from backend.const import MAX_PHOTO_SIZE_BYTES
+from recipes.models import Recipe
 
 User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор для отображения информации о пользователе"""
+    """Сериализатор для отображения информации о пользователе."""
 
     is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(
@@ -36,10 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для регистрации нового пользователя.
-    Валидирует пароль по встроенным правилам Django.
-    """
+    """Сериализатор для регистрации нового пользователя."""
 
     password = serializers.CharField(
         write_only=True, validators=[validate_password])
@@ -65,7 +62,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(UserSerializer):
-    """Сериализатор для отображения информации о подписке"""
+    """Сериализатор для отображения информации о подписке."""
 
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
@@ -102,7 +99,7 @@ class AvatarUploadSerializer(serializers.Serializer):
     """Сериализатор для загрузки/обновления аватара пользователя."""
 
     avatar = Base64ImageField(required=True)
-    MAX_SIZE = MAX_SIZE_PHOTO_MB
+    MAX_SIZE = MAX_PHOTO_SIZE_BYTES
 
     class Meta:
         model = User

@@ -1,31 +1,30 @@
 from http import HTTPStatus
 
-from api.recipes.serializers import (IngredientSerializer,
-                                     RecipeCreateSerializer, RecipeSerializer,
-                                     ShortRecipeSerializer, TagSerializer)
 from django.conf import settings
 from django.db.models import F, Sum
 from django.http import HttpResponse
 from django_filters.rest_framework import DjangoFilterBackend
-from recipes.models import (Bookmark, CartItem, Ingredient, IngredientAmount,
-                            Recipe, Tag)
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from api.recipes.serializers import (BookmarkCreateSerializer,
+                                     CartItemCreateSerializer,
+                                     IngredientSerializer,
+                                     RecipeCreateSerializer, RecipeSerializer,
+                                     ShortRecipeSerializer, TagSerializer)
 from backend.pagination import CustomPageNumberPagination
+from recipes.models import Ingredient, IngredientAmount, Recipe, Tag
 
 from .filters import IngredientFilter, RecipeFilter
 from .permissions import IsAuthorOrAdminOrReadOnly
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Отдаёт список тегов (например: Завтрак, Обед, Ужин).
-    Только для чтения.
-    """
+    """Отдаёт список тегов (например: Завтрак, Обед, Ужин)."""
+
     queryset = Tag.objects.all().order_by('id')
     serializer_class = TagSerializer
     permission_classes = (permissions.AllowAny,)
@@ -36,6 +35,7 @@ class IngredientViewSet(mixins.ListModelMixin,
                         mixins.RetrieveModelMixin,
                         viewsets.GenericViewSet):
     """Отдаёт список ингредиентов."""
+
     queryset = Ingredient.objects.all().order_by('name')
     serializer_class = IngredientSerializer
     permission_classes = (permissions.AllowAny,)
@@ -44,23 +44,33 @@ class IngredientViewSet(mixins.ListModelMixin,
     filter_backends = (DjangoFilterBackend,)
     filterset_class = IngredientFilter
 
+    def list(self, request, *args, **kwargs):
+        qs = self.filter_queryset(self.get_queryset())
+        if request.query_params.get('name'):
+            qs = qs[:10]
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
 
 class RecipeViewSet(viewsets.ModelViewSet):
     """
     CRUD для рецептов.
+
     Автор может изменять свои рецепты блюд, админ — любые.
     """
+
     queryset = Recipe.objects.select_related('author').prefetch_related(
         'tags', 'ingredient_amounts__ingredient'
     )
     serializer_class = RecipeSerializer
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     permission_classes = [IsAuthorOrAdminOrReadOnly]
     parser_classes = (JSONParser, MultiPartParser, FormParser)
     pagination_class = CustomPageNumberPagination
 
     def get_serializer_class(self):
-        """Для POST/PUT/PATCH используем отдельный сериализатор"""
+        """Для POST/PUT/PATCH используем отдельный сериализатор."""
         if self.request.method in ('POST', 'PUT', 'PATCH'):
             return RecipeCreateSerializer
         return RecipeSerializer
@@ -85,54 +95,63 @@ class RecipeViewSet(viewsets.ModelViewSet):
         Возвращает ссылку на рецепт (использует FRONTEND_URL из настроек).
         """
         recipe = self.get_object()
-        base = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
-        if not base:
-            base = request.build_absolute_uri('/').rstrip('/')
-        url = f"{base}/recipes/{recipe.id}"
+        base = (settings.FRONTEND_URL
+                or request.build_absolute_uri('/')).rstrip('/')
+        url = f'{base}/recipes/{recipe.id}'
         return Response({'short-link': url}, status=HTTPStatus.OK)
 
-    def _toggle_relation(self, request, model, recipe, *, add: bool,
+    def _toggle_relation(self, request, *, serializer_class, recipe, add: bool,
                          already_msg: str = '', absent_msg: str = ''):
-        """ DRY для избранного и корзины """
+        """DRY для избранного и корзины через сериалайзер."""
         if add:
-            obj, created = model.objects.get_or_create(
-                user=request.user, recipe=recipe)
-            if not created:
-                return Response({'detail': already_msg},
-                                status=status.HTTP_400_BAD_REQUEST)
-            data = ShortRecipeSerializer(
-                recipe, context={'request': request}).data
-            return Response(data, status=status.HTTP_201_CREATED)
-        deleted, _ = model.objects.filter(
-            user=request.user, recipe=recipe).delete()
+            serializer = serializer_class(
+                data={'recipe': recipe.id},
+                context={'request': request},
+            )
+            if serializer.is_valid():
+                try:
+                    serializer.save()
+                except Exception:
+                    return Response({'detail': already_msg},
+                                    status=status.HTTP_400_BAD_REQUEST)
+                data = ShortRecipeSerializer(
+                    recipe, context={'request': request}).data
+                return Response(data, status=status.HTTP_201_CREATED)
+            return Response({'detail': already_msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        deleted, _ = serializer_class.Meta.model.objects.filter(
+            user=request.user, recipe=recipe
+        ).delete()
         if not deleted:
             return Response({'detail': absent_msg},
                             status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True,
-            methods=['post'],
-            permission_classes=[IsAuthenticated]
-            )
+    @action(
+        detail=True,
+        methods=['post'],
+        permission_classes=[IsAuthenticated]
+    )
     def favorite(self, request, pk=None):
-        """
-        Добавить рецепт в избранное текущего пользователя.
-        """
+        """Добавить рецепт в избранное текущего пользователя."""
         recipe = self.get_object()
         return self._toggle_relation(
-            request, Bookmark, recipe,
+            request,
+            serializer_class=BookmarkCreateSerializer,
+            recipe=recipe,
             add=True,
             already_msg='Рецепт уже в избранном',
         )
 
     @favorite.mapping.delete
     def delete_favorite(self, request, pk=None):
-        """
-        Удалить рецепт из избранного.
-        """
+        """Удалить рецепт из избранного."""
         recipe = self.get_object()
         return self._toggle_relation(
-            request, Bookmark, recipe,
+            request,
+            serializer_class=BookmarkCreateSerializer,
+            recipe=recipe,
             add=False,
             absent_msg='Рецепта нет в избранном',
         )
@@ -143,24 +162,24 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def shopping_cart(self, request, pk=None):
-        """
-        Добавить рецепт в список покупок.
-        """
+        """Добавить рецепт в список покупок."""
         recipe = self.get_object()
         return self._toggle_relation(
-            request, CartItem, recipe,
+            request,
+            serializer_class=CartItemCreateSerializer,
+            recipe=recipe,
             add=True,
             already_msg='Рецепт уже в списке покупок',
         )
 
     @shopping_cart.mapping.delete
     def delete_shopping_cart(self, request, pk=None):
-        """
-        Удалить рецепт из списка покупок.
-        """
+        """Удалить рецепт из списка покупок."""
         recipe = self.get_object()
         return self._toggle_relation(
-            request, CartItem, recipe,
+            request,
+            serializer_class=CartItemCreateSerializer,
+            recipe=recipe,
             add=False,
             absent_msg='Рецепта нет в списке покупок',
         )
@@ -188,8 +207,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         """
-        Собирает все ингредиенты из рецептов в корзине пользователя,
-        суммирует по названию + единице измерения и отдает txt-файл.
+        Txt-файл со всеми ингредиентами из рецептов в корзине пользователя.
         """
         payload = self._build_shopping_list(request.user)
         resp = HttpResponse(payload, content_type='text/plain; charset=utf-8')

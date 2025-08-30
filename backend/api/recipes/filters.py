@@ -1,5 +1,6 @@
 import django_filters
 from django_filters import rest_framework as filters
+
 from recipes.models import Ingredient, Recipe, Tag
 
 
@@ -32,13 +33,9 @@ class RecipeFilter(filters.FilterSet):
 
 
 class IngredientFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(method='startswith')
+    name = django_filters.CharFilter(
+        field_name='name', lookup_expr='istartswith')
 
     class Meta:
         model = Ingredient
         fields = ('name',)
-
-    def startswith(self, queryset, name, value):
-        if not value:
-            return queryset.order_by('name')
-        return queryset.filter(name__istartswith=value).order_by('name')[:10]

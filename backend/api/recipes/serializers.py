@@ -1,29 +1,33 @@
-from api.users.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from recipes.models import Ingredient, IngredientAmount, Recipe, Tag
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from backend.const import (MAX_COOKING_TIME, MAX_INGR_AMOUNT, MIN_AMOUNT,
+from api.users.serializers import UserSerializer
+from backend.const import (MAX_COOKING_TIME, MAX_INGREDIENT_AMOUNT, MIN_AMOUNT,
                            MIN_COOKING_TIME)
+from recipes.models import (Bookmark, CartItem, Ingredient, IngredientAmount,
+                            Recipe, Tag)
 
 
 class TagSerializer(serializers.ModelSerializer):
-    '''Cериализатор тега'''
+    """Cериализатор тега."""
+
     class Meta:
         model = Tag
         fields = ('id', 'name', 'slug')
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    '''Cериализатор ингредиента'''
+    """Cериализатор ингредиента."""
+
     class Meta:
         model = Ingredient
         fields = ('id', 'name', 'measurement_unit')
 
 
 class IngredientAmountSerializer(serializers.ModelSerializer):
-    '''Представление ингредиента внутри рецепта'''
+    """Представление ингредиента внутри рецепта."""
+
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(
@@ -36,20 +40,20 @@ class IngredientAmountSerializer(serializers.ModelSerializer):
 
 
 class IngredientAmountInputSerializer(serializers.Serializer):
-    '''
-    Ввод ингредиента при создании/обновлении рецепта
-    '''
+    """Ввод ингредиента при создании/обновлении рецепта."""
+
     id = serializers.PrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(),
         source='ingredient',
     )
     amount = serializers.IntegerField(
-        min_value=MIN_AMOUNT, max_value=MAX_INGR_AMOUNT
+        min_value=MIN_AMOUNT, max_value=MAX_INGREDIENT_AMOUNT
     )
 
 
 class ShortRecipeSerializer(serializers.ModelSerializer):
-    '''Короткая карточка рецепта (для избранного/корзины и т.п.)'''
+    """Короткая карточка рецепта (для избранного/корзины и т.п.)."""
+
     image = serializers.ImageField(read_only=True)
     cooking_time = serializers.IntegerField(read_only=True)
 
@@ -59,7 +63,8 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    '''Детальная карточка рецепта'''
+    """Детальная карточка рецепта."""
+
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     ingredients = IngredientAmountSerializer(source='ingredient_amounts',
@@ -95,7 +100,8 @@ class RecipeSerializer(serializers.ModelSerializer):
 
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
-    '''Создание / обновление рецепта'''
+    """Создание / обновление рецепта."""
+
     ingredients = IngredientAmountInputSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(), many=True
@@ -116,7 +122,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         )
 
     def validate_ingredients(self, ingredients):
-        '''Проверяем список ингредиентов: не пустой, без дублей'''
+        """Проверяем список ингредиентов: не пустой, без дублей."""
         if ingredients is None:
             return ingredients
         if not ingredients:
@@ -126,15 +132,16 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             raise ValidationError('Ингредиенты должны быть уникальными.')
         for it in ingredients:
             amt = it.get('amount')
-            if amt is None or not (MIN_AMOUNT <= int(amt) <= MAX_INGR_AMOUNT):
+            if amt is None or (
+                    not (MIN_AMOUNT <= int(amt) <= MAX_INGREDIENT_AMOUNT)):
                 raise ValidationError(
                     'Количество для ингредиента должно быть '
-                    f'в диапазоне {MIN_AMOUNT}…{MAX_INGR_AMOUNT}.'
+                    f'в диапазоне {MIN_AMOUNT}…{MAX_INGREDIENT_AMOUNT}.'
                 )
         return ingredients
 
     def validate_tags(self, tags):
-        '''Запрещаем повторяющиеся теги в запросе'''
+        """Запрещаем повторяющиеся теги в запросе."""
         if tags is None:
             return tags
         if not tags:
@@ -172,7 +179,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def _set_tags_and_ingredients(self, recipe, tags_data, ingredients_data):
-        '''Единая точка обновления M2M и through-модели'''
+        """Единая точка обновления M2M и through-модели."""
         if tags_data is not None:
             recipe.tags.set(tags_data)
         if ingredients_data is not None:
@@ -201,5 +208,27 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance):
-        '''После create/update отдаём полную карточку, как на GET'''
+        """После create/update отдаём полную карточку, как на GET"""
         return RecipeSerializer(instance, context=self.context).data
+
+
+class _UserRecipeLinkBaseSerializer(serializers.ModelSerializer):
+    """Базовый сериалайзер: проставляет user из request."""
+
+    class Meta:
+        fields = ('id', 'recipe')
+        read_only_fields = ('id',)
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return self.Meta.model.objects.create(user=user, **validated_data)
+
+
+class BookmarkCreateSerializer(_UserRecipeLinkBaseSerializer):
+    class Meta(_UserRecipeLinkBaseSerializer.Meta):
+        model = Bookmark
+
+
+class CartItemCreateSerializer(_UserRecipeLinkBaseSerializer):
+    class Meta(_UserRecipeLinkBaseSerializer.Meta):
+        model = CartItem
