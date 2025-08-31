@@ -1,12 +1,12 @@
+from api.users.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
+from recipes.models import (Bookmark, CartItem, Ingredient, IngredientAmount,
+                            Recipe, Tag)
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from api.users.serializers import UserSerializer
-from backend.const import (MAX_COOKING_TIME, MAX_INGREDIENT_AMOUNT, MIN_AMOUNT,
-                           MIN_COOKING_TIME)
-from recipes.models import (Bookmark, CartItem, Ingredient, IngredientAmount,
-                            Recipe, Tag)
+from backend.constants import (MAX_COOKING_TIME, MAX_INGREDIENT_AMOUNT,
+                               MIN_AMOUNT, MIN_COOKING_TIME)
 
 
 class TagSerializer(serializers.ModelSerializer):

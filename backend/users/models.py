@@ -3,8 +3,8 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 
-from backend.const import (USER_EMAIL_MAX_LEN, USER_FIRST_NAME_MAX_LEN,
-                           USER_LAST_NAME_MAX_LEN, USER_USERNAME_MAX_LEN)
+from backend.constants import (USER_EMAIL_MAX_LEN, USER_FIRST_NAME_MAX_LEN,
+                               USER_LAST_NAME_MAX_LEN, USER_USERNAME_MAX_LEN)
 
 
 class User(AbstractUser):

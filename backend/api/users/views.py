@@ -1,5 +1,9 @@
 from http import HTTPStatus
 
+from api.users.serializers import (AvatarUploadSerializer,
+                                   FollowCreateSerializer,
+                                   SubscriptionSerializer,
+                                   UserRegistrationSerializer, UserSerializer)
 from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, serializers, status, viewsets
@@ -7,23 +11,14 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-
-from api.users.serializers import (AvatarUploadSerializer,
-                                   SubscriptionSerializer,
-                                   UserRegistrationSerializer, UserSerializer)
-from backend.pagination import CustomPageNumberPagination
 from users.models import Follow, User
+
+from backend.pagination import CustomPageNumberPagination
 
 
 class UserViewSet(viewsets.ModelViewSet):
     """
     Вьюсет для работы с пользователями.
-
-    - список, регистрация и профиль,
-    - /users/me/ (данные текущего пользователя),
-    - смена пароля,
-    - загрузка/удаление аватара,
-    - подписки и отписки.
     """
 
     queryset = User.objects.all()
@@ -132,21 +127,13 @@ class UserViewSet(viewsets.ModelViewSet):
         """Оформляет подписку на выбранного автора"""
         author = get_object_or_404(User, pk=pk)
 
-        if author == request.user:
-            return Response(
-                {'detail': 'Нельзя подписаться на самого себя.'},
-                status=HTTPStatus.BAD_REQUEST
-            )
+        create_ser = FollowCreateSerializer(
+            data={'author': author.id},
+            context={'request': request},
+        )
+        create_ser.is_valid(raise_exception=True)
+        create_ser.save()
 
-        if Follow.objects.filter(
-            subscriber=request.user, author=author
-        ).exists():
-            return Response(
-                {'detail': 'Вы уже подписаны на этого автора.'},
-                status=HTTPStatus.BAD_REQUEST
-            )
-
-        Follow.objects.create(subscriber=request.user, author=author)
         data = SubscriptionSerializer(
             author, context={'request': request}).data
         return Response(data, status=HTTPStatus.CREATED)

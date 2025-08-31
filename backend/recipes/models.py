@@ -3,10 +3,11 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import UniqueConstraint
 
-from backend.const import (INGREDIENT_NAME_MAX_LEN, INGREDIENT_UNIT_MAX_LEN,
-                           MAX_COOKING_TIME, MAX_INGREDIENT_AMOUNT, MIN_AMOUNT,
-                           MIN_COOKING_TIME, RECIPE_NAME_MAX_LEN,
-                           TAG_NAME_MAX_LEN, TAG_SLUG_MAX_LEN)
+from backend.constants import (INGREDIENT_NAME_MAX_LEN,
+                               INGREDIENT_UNIT_MAX_LEN, MAX_COOKING_TIME,
+                               MAX_INGREDIENT_AMOUNT, MIN_AMOUNT,
+                               MIN_COOKING_TIME, RECIPE_NAME_MAX_LEN,
+                               TAG_NAME_MAX_LEN, TAG_SLUG_MAX_LEN)
 
 
 class Tag(models.Model):

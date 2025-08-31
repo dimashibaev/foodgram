@@ -1,6 +1,6 @@
 from rest_framework.pagination import PageNumberPagination
 
-from backend.const import DEFAULT_PAGE_SIZE, MAX_DEFAULT_PAGE_SIZE
+from backend.constants import DEFAULT_PAGE_SIZE, MAX_DEFAULT_PAGE_SIZE
 
 
 class CustomPageNumberPagination(PageNumberPagination):
