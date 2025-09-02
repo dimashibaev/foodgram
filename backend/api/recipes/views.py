@@ -80,9 +80,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk=None):
         """Возвращает ссылку на рецепт."""
         recipe = self.get_object()
-        base = getattr(settings, 'FRONTEND_URL', '').rstrip('/')
-        if not base:
-            base = request.build_absolute_uri('/').rstrip('/')
+        base = (settings.FRONTEND_URL
+                or request.build_absolute_uri('/')).rstrip('/')
         url = f'{base}/recipes/{recipe.id}'
         return Response({'short-link': url}, status=HTTPStatus.OK)
 

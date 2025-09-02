@@ -5,6 +5,7 @@ from api.users.serializers import (AvatarUploadSerializer,
                                    SubscriptionSerializer,
                                    UserRegistrationSerializer, UserSerializer)
 from django.contrib.auth.password_validation import validate_password
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -124,18 +125,21 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def subscribe(self, request, pk=None):
-        """Оформляет подписку на выбранного автора"""
+        """Оформляет подписку на выбранного автора."""
         author = get_object_or_404(User, pk=pk)
 
-        create_ser = FollowCreateSerializer(
+        create_serializer = FollowCreateSerializer(
             data={'author': author.id},
             context={'request': request},
         )
-        create_ser.is_valid(raise_exception=True)
-        create_ser.save()
-
-        data = SubscriptionSerializer(
-            author, context={'request': request}).data
+        create_serializer.is_valid(raise_exception=True)
+        create_serializer.save()
+        author_annotated = (
+            User.objects.annotate(recipes_count=Count(
+                'recipes')).get(pk=author.pk)
+        )
+        data = SubscriptionSerializer(author_annotated, context={
+                                      'request': request}).data
         return Response(data, status=HTTPStatus.CREATED)
 
     @subscribe.mapping.delete
@@ -158,19 +162,20 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated]
     )
     def subscriptions(self, request):
-        """Возвращает список авторов, на которых подписан пользователь"""
-        authors = User.objects.filter(
-            subscribers__subscriber=request.user
-        ).distinct()
+        """Возвращает список авторов, на которых подписан пользователь."""
+        authors = (
+            User.objects
+            .filter(subscribers__subscriber=request.user)
+            .annotate(recipes_count=Count('recipes'))
+            .distinct()
+        )
 
         page = self.paginate_queryset(authors)
         if page is not None:
             serializer = SubscriptionSerializer(
-                page, many=True, context={'request': request}
-            )
+                page, many=True, context={'request': request})
             return self.get_paginated_response(serializer.data)
 
         serializer = SubscriptionSerializer(
-            authors, many=True, context={'request': request}
-        )
+            authors, many=True, context={'request': request})
         return Response(serializer.data)

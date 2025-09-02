@@ -28,6 +28,14 @@ docker compose up --build
 
 API-документация: http://localhost/api/docs/
 
+
+ip: http://89.169.167.79/
+Домен: http://foodgram.serveirc.com/
+Почта админа: admin.admin@gmail.com
+Логин: admin
+Пароль: admin
+
+
 Автор
 
 Dima Shibaev

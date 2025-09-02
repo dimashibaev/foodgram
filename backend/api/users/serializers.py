@@ -52,21 +52,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Создаёт нового пользователя с хешированным паролем."""
-        user = User.objects.create_user(
+        return User.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'],
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             password=validated_data['password'],
         )
-        return user
 
 
 class SubscriptionSerializer(UserSerializer):
     """Сериализатор для отображения информации о подписке."""
 
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + ('recipes', 'recipes_count',)
@@ -75,23 +74,16 @@ class SubscriptionSerializer(UserSerializer):
         """Возвращает список рецептов автора."""
         from api.recipes.serializers import ShortRecipeSerializer
 
-        qs = Recipe.objects.filter(author=obj)
+        queryset = Recipe.objects.filter(author=obj)
         request = self.context.get('request')
         limit = request.query_params.get('recipes_limit') if request else None
         if isinstance(limit, str) and limit.isdigit():
             n = int(limit)
             if n >= 0:
-                qs = qs[:n]
+                queryset = queryset[:n]
 
-        return ShortRecipeSerializer(
-            qs, many=True, context={'request': request}).data
-
-    def get_recipes_count(self, obj):
-        """Возвращает общее количество рецептов автора."""
-        annotated = getattr(obj, 'recipes_count', None)
-        if annotated is not None:
-            return annotated
-        return obj.recipes.count()
+        return ShortRecipeSerializer(queryset, many=True,
+                                     context={'request': request}).data
 
 
 class FollowCreateSerializer(serializers.ModelSerializer):

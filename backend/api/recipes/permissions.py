@@ -2,7 +2,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAuthorOrAdminOrReadOnly(BasePermission):
-    """ Права доступа к объекту."""
+    """Права доступа к объекту."""
 
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
