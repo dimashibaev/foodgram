@@ -25,7 +25,7 @@ from .permissions import IsAuthorOrAdminOrReadOnly
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     """Отдаёт список тегов (например: Завтрак, Обед, Ужин)."""
 
-    queryset = Tag.objects.all().order_by('id')
+    queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = (permissions.AllowAny,)
     pagination_class = None
@@ -36,7 +36,7 @@ class IngredientViewSet(mixins.ListModelMixin,
                         viewsets.GenericViewSet):
     """Отдаёт список ингредиентов."""
 
-    queryset = Ingredient.objects.all().order_by('name')
+    queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = (permissions.AllowAny,)
     pagination_class = None
@@ -45,9 +45,7 @@ class IngredientViewSet(mixins.ListModelMixin,
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    """
-    CRUD для рецептов. Автор может изменять свои рецепты, админ — любые.
-    """
+    """CRUD для рецептов."""
 
     queryset = Recipe.objects.select_related('author').prefetch_related(
         'tags', 'ingredient_amounts__ingredient'

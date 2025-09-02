@@ -18,9 +18,7 @@ from backend.pagination import CustomPageNumberPagination
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """
-    Вьюсет для работы с пользователями.
-    """
+    """Вьюсет для работы с пользователями."""
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
